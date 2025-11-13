@@ -104,6 +104,108 @@ async function run() {
         res.status(500).json({ message: 'Failed to delete challenge' });
       }
     });
+
+    // ------------------ USER CHALLENGES ------------------ //
+    app.get('/user-challenges/:userId', async (req, res) => {
+      try {
+        const { userId } = req.params;
+        const userChallenges = await userChallengesCollection
+          .find({ userId })
+          .toArray();
+
+        const challengeIds = userChallenges
+          .map(uc => {
+            try {
+              return uc.challengeId instanceof ObjectId
+                ? uc.challengeId
+                : new ObjectId(uc.challengeId);
+            } catch {
+              return null;
+            }
+          })
+          .filter(Boolean);
+
+        const challenges = await challengeCollection
+          .find({ _id: { $in: challengeIds } })
+          .toArray();
+
+        const merged = userChallenges.map(uc => {
+          let challengeObj = null;
+          try {
+            const cid =
+              uc.challengeId instanceof ObjectId
+                ? uc.challengeId
+                : new ObjectId(uc.challengeId);
+            challengeObj = challenges.find(c => c._id.equals(cid)) || null;
+          } catch {}
+          return { ...uc, challenge: challengeObj };
+        });
+
+        res.status(200).json(merged);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to fetch user challenges' });
+      }
+    });
+
+    app.post('/user-challenges', async (req, res) => {
+      try {
+        const { userId, challengeId } = req.body;
+        const objectChallengeId = new ObjectId(challengeId);
+
+        const exists = await userChallengesCollection.findOne({
+          userId,
+          challengeId: objectChallengeId,
+        });
+        if (exists) return res.status(400).json({ message: 'Already joined' });
+
+        const newUserChallenge = {
+          userId,
+          challengeId: objectChallengeId,
+          status: 'Not Started',
+          progress: 0,
+          joinDate: new Date(),
+        };
+        await userChallengesCollection.insertOne(newUserChallenge);
+
+        await challengeCollection.updateOne(
+          { _id: objectChallengeId },
+          { $inc: { participants: 1 } }
+        );
+
+        res
+          .status(201)
+          .json({ message: 'Joined challenge', data: newUserChallenge });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to join challenge' });
+      }
+    });
+
+    app.delete('/user-challenges/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const userChallenge = await userChallengesCollection.findOne({
+          _id: new ObjectId(id),
+        });
+        if (!userChallenge)
+          return res.status(404).json({ message: 'User challenge not found' });
+
+        const challengeId = userChallenge.challengeId;
+
+        await userChallengesCollection.deleteOne({ _id: new ObjectId(id) });
+        await challengeCollection.updateOne(
+          { _id: new ObjectId(challengeId) },
+          { $inc: { participants: -1 } }
+        );
+
+        res.status(200).json({ message: 'Left challenge successfully' });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to leave challenge' });
+      }
+    });
+
     await client.db('admin').command({ ping: 1 });
     console.log('🌿 Successfully connected to MongoDB!');
   } catch (err) {
