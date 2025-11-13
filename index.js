@@ -43,6 +43,19 @@ async function run() {
       }
     });
 
+    app.get('/challenges/:id', async (req, res) => {
+      try {
+        const challenge = await challengeCollection.findOne({
+          _id: new ObjectId(req.params.id),
+        });
+        if (!challenge)
+          return res.status(404).json({ message: 'Challenge not found' });
+        res.status(200).json(challenge);
+      } catch (error) {
+        res.status(400).json({ message: 'Invalid challenge ID' });
+      }
+    });
+
     await client.db('admin').command({ ping: 1 });
     console.log('🌿 Successfully connected to MongoDB!');
   } catch (err) {
