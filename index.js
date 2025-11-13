@@ -90,6 +90,20 @@ async function run() {
         res.status(500).json({ message: 'Failed to update challenge' });
       }
     });
+
+    app.delete('/challenges/:id', async (req, res) => {
+      try {
+        const result = await challengeCollection.deleteOne({
+          _id: new ObjectId(req.params.id),
+        });
+        if (result.deletedCount === 0)
+          return res.status(404).json({ message: 'Challenge not found' });
+        res.status(200).json({ message: 'Challenge deleted' });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to delete challenge' });
+      }
+    });
     await client.db('admin').command({ ping: 1 });
     console.log('🌿 Successfully connected to MongoDB!');
   } catch (err) {
