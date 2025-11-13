@@ -206,6 +206,21 @@ async function run() {
       }
     });
 
+    // ------------------ TIPS ------------------ //
+    app.get('/all-tips', async (req, res) => {
+      try {
+        const tips = await tipsCollection
+          .find({})
+          .sort({ createdAt: -1 })
+          .limit(15)
+          .toArray();
+        res.status(200).json(tips);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to fetch tips' });
+      }
+    });
+
     await client.db('admin').command({ ping: 1 });
     console.log('🌿 Successfully connected to MongoDB!');
   } catch (err) {
