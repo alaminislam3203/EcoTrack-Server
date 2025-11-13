@@ -56,6 +56,25 @@ async function run() {
       }
     });
 
+    app.post('/challenges', async (req, res) => {
+      try {
+        const newChallenge = req.body;
+        if (!newChallenge.createdBy)
+          return res
+            .status(400)
+            .json({ message: 'createdBy field is required' });
+
+        newChallenge.participants = newChallenge.participants || 0;
+        const result = await challengeCollection.insertOne(newChallenge);
+        res
+          .status(201)
+          .json({ message: 'Challenge added', challengeId: result.insertedId });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to create challenge' });
+      }
+    });
+
     await client.db('admin').command({ ping: 1 });
     console.log('🌿 Successfully connected to MongoDB!');
   } catch (err) {
