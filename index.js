@@ -23,6 +23,25 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     await client.connect();
+    const db = client.db(process.env.DB_NAME);
+
+    // Collections
+    const challengeCollection = db.collection('challenges');
+    const userChallengesCollection = db.collection('UserChallenges');
+    const eventsCollection = db.collection('upcomingEvents');
+    const participantsCollection = db.collection('eventParticipants');
+    const tipsCollection = db.collection('all-tips');
+
+    // ------------------ CHALLENGES ROUTES ------------------ //
+    app.get('/challenges', async (req, res) => {
+      try {
+        const challenges = await challengeCollection.find({}).toArray();
+        res.status(200).json(challenges);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to fetch challenges' });
+      }
+    });
 
     await client.db('admin').command({ ping: 1 });
     console.log('🌿 Successfully connected to MongoDB!');
