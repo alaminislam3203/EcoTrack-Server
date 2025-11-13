@@ -221,6 +221,50 @@ async function run() {
       }
     });
 
+    // ------------------ EVENTS ------------------ //
+    app.get('/events', async (req, res) => {
+      try {
+        const events = await eventsCollection.find().toArray();
+        res.status(200).json(events);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to fetch events' });
+      }
+    });
+
+    app.post('/events/join', async (req, res) => {
+      try {
+        const { userId, eventId } = req.body;
+        const event = await eventsCollection.findOne({
+          _id: new ObjectId(eventId),
+        });
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+
+        if (event.currentParticipants >= event.maxParticipants)
+          return res.status(400).json({ message: 'Event is full' });
+
+        const exists = await participantsCollection.findOne({
+          userId,
+          eventId,
+        });
+        if (exists) return res.status(400).json({ message: 'Already joined' });
+
+        await participantsCollection.insertOne({
+          userId,
+          eventId,
+          joinedAt: new Date(),
+        });
+        await eventsCollection.updateOne(
+          { _id: new ObjectId(eventId) },
+          { $inc: { currentParticipants: 1 } }
+        );
+
+        res.json({ message: 'Joined successfully' });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to join event' });
+      }
+    });
     await client.db('admin').command({ ping: 1 });
     console.log('🌿 Successfully connected to MongoDB!');
   } catch (err) {
