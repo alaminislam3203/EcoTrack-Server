@@ -75,6 +75,21 @@ async function run() {
       }
     });
 
+    app.put('/challenges/:id', async (req, res) => {
+      try {
+        const updateData = req.body;
+        const result = await challengeCollection.updateOne(
+          { _id: new ObjectId(req.params.id) },
+          { $set: updateData }
+        );
+        if (result.matchedCount === 0)
+          return res.status(404).json({ message: 'Challenge not found' });
+        res.status(200).json({ message: 'Challenge updated' });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to update challenge' });
+      }
+    });
     await client.db('admin').command({ ping: 1 });
     console.log('🌿 Successfully connected to MongoDB!');
   } catch (err) {
