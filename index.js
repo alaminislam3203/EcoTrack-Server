@@ -265,6 +265,23 @@ async function run() {
         res.status(500).json({ message: 'Failed to join event' });
       }
     });
+
+    // ------------------ STATS ------------------ //
+    app.get('/stats', async (req, res) => {
+      try {
+        const challenges = await challengeCollection.find().toArray();
+        const totalChallenges = challenges.length;
+        const totalEventParticipants = challenges.reduce(
+          (sum, c) => sum + (c.participants || 0),
+          0
+        );
+        res.status(200).json({ totalChallenges, totalEventParticipants });
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Failed to load statistics' });
+      }
+    });
+
     await client.db('admin').command({ ping: 1 });
     console.log('🌿 Successfully connected to MongoDB!');
   } catch (err) {
